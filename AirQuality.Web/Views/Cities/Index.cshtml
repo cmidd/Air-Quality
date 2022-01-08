@@ -1,0 +1,63 @@
+﻿@model IList<CitiesRow>
+@{
+    ViewData["Title"] = "Cities";
+}
+<script src="~/js/virtual-select.min.js"></script>
+
+<h1>@ViewData["Title"]</h1>
+
+@*    @foreach (var city in Model)
+    {
+    var label = Html.Encode(city.City);
+    var value = city.City;
+    @Html.Raw($"{{ label: '', value: '0' }},");
+    }*@
+
+<div id="city-select"></div>
+
+<script>
+    VirtualSelect.init({
+      ele: '#city-select',
+      search: true,
+      options: [
+    @foreach (var city in Model)
+    {
+        var cityName = Html.Encode(city.City);
+        var label = $"{cityName}, {city.Country}";
+        @Html.Raw($"{{ label: '{label}', value: '{cityName}' }},")
+    }
+      ],
+    });
+</script>
+
+<table>
+    <thead>
+        <tr>
+            <td>City</td>
+            <td>Country</td>
+            <td>Count</td>
+            <td>Locations</td>
+            <td>First Updated</td>
+            <td>Last Updated</td>
+            <td>Parameters</td>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Any())
+        {
+            foreach (var city in Model)
+            {
+                <tr>
+                    <td>@Html.Raw(Html.Encode(city.City))</td>
+                    <td>@city.Country</td>
+                    <td>@city.Count</td>
+                    <td>@city.Locations</td>
+                    <td>@city.FirstUpdated.ToShortDateString()</td>
+                    <td>@city.LastUpdated.ToShortDateString()</td>
+                    <td>@string.Join(", ", city.Parameters)</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+

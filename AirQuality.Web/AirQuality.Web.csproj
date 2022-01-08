@@ -7,8 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AirQuality.Models\AirQuality.Models.csproj" />
-    <ProjectReference Include="..\AirQuality.Services\AirQuality.Services.csproj" />
+    <Folder Include="Models\ViewModels\" />
   </ItemGroup>
 
 </Project>
