@@ -64,5 +64,10 @@ namespace AirQuality.Web.Services.Interfaces
         /// </summary>
         /// <param name="city">Name of the city to get locations for</param>
         IList<LocationsRow> GetLocations(string city);
+
+        /// <summary>
+        /// Obtain data on one location
+        /// </summary>
+        LocationsRow GetLocation(int id);
     }
 }

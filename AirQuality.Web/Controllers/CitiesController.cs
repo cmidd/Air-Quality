@@ -1,7 +1,6 @@
 ﻿using AirQuality.Web.Models.ViewModels.Cities;
 using AirQuality.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using System.Web;
 
 namespace AirQuality.Web.Controllers
 {
@@ -14,21 +13,11 @@ namespace AirQuality.Web.Controllers
             _openAqApiService = openAqApiService;
         }
 
-        public ActionResult Index()
-        {
-            var model = new CitiesViewModel()
-            {
-                Cities = _openAqApiService.GetAllCities()
-            };
-
-            return View(model);
-        }
-
         [HttpGet]
         [HttpPost]
         public ActionResult Data(string city = "")
         {
-            var model = new DataViewModel()
+            var model = new CitiesDataViewModel()
             {
                 City = city,
                 Locations = _openAqApiService.GetLocations(city)

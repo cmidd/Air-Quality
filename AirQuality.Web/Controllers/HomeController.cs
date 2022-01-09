@@ -1,4 +1,5 @@
-﻿using AirQuality.Web.Services.Interfaces;
+﻿using AirQuality.Web.Models.ViewModels.Cities;
+using AirQuality.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AirQuality.Web.Controllers
@@ -14,7 +15,12 @@ namespace AirQuality.Web.Controllers
 
         public ActionResult Index()
         {
-            return View();
+            var model = new CitiesViewModel()
+            {
+                Cities = _openAqApiService.GetAllCities()
+            };
+
+            return View(model);
         }
 
         public ActionResult Error()

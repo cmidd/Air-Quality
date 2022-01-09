@@ -2,7 +2,7 @@
 
 namespace AirQuality.Web.Models.ViewModels.Cities
 {
-    public class DataViewModel
+    public class CitiesDataViewModel
     {
         public string City { get; set; } = string.Empty;
 

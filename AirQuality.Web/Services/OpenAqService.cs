@@ -160,6 +160,7 @@ namespace AirQuality.Web.Services
             }
         }
 
+        /// <inheritdoc />
         public IList<LocationsRow> GetLocations(string city)
         {
             if (string.IsNullOrWhiteSpace(city))
@@ -168,6 +169,14 @@ namespace AirQuality.Web.Services
             var locationsResult = GetLocationsResult(cities: new string[1] { city });
 
             return locationsResult?.Results ?? new List<LocationsRow>();
+        }
+
+        /// <inheritdoc />
+        public LocationsRow GetLocation(int id)
+        {
+            var locationsResult = GetLocationsResult(locationId: id);
+                
+            return locationsResult?.Results?.FirstOrDefault() ?? new LocationsRow();
         }
 
         private string GetClientResponse(string endpoint, string? query = null)

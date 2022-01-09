@@ -1,4 +1,4 @@
-﻿@model AirQuality.Web.Models.ViewModels.Cities.DataViewModel
+﻿@model AirQuality.Web.Models.ViewModels.Cities.CitiesDataViewModel
 @{
     ViewData["Title"] = "City Data";
 
@@ -8,19 +8,16 @@
     }
 }
 
-<h1>@ViewData["Title"]</h1>
+<h1>Locations for @(Model.City)</h1>
 
-<div>
-    Locations for @(Model.City)
-</div>
-
-<table>
+<table class="table">
     <thead>
         <tr>
             <td>Id</td>
             <td>Name</td>
             <td>Coordinates</td>
             <td>Last Updated</td>
+            <td></td>
         </tr>
     </thead>
     <tbody>
@@ -31,6 +28,7 @@
                 <td>@location.Name</td>
                 <td>@location.Coordinates.ToString()</td>
                 <td>@location.LastUpdated.ToShortDateString()</td>
+                <td>@Html.ActionLink("View data", "Data", "Location", new { @locationId = location.Id }, new { @class = "btn btn-primary", @style = "color:white" })</td>
             </tr>
         }
     </tbody>

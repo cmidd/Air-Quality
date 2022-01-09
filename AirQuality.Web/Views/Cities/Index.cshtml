@@ -8,11 +8,15 @@
     }
 }
 
-<h1>@ViewData["Title"]</h1>
+<h1>Select a city</h1>
+
+<br />
 
 @{ Html.RenderPartial("_CitiesSelectDropdown", Model.Cities); }
 
-<table>
+<br />
+
+<table class="table">
     <thead>
         <tr>
             <td>City</td>
