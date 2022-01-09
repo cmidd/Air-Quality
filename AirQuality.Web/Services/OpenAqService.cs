@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 using AirQuality.Web.Models.AppSettings;
 using System.Text.Json;
 using AirQuality.Web.Models.OpenAq.Responses;
-using System.Collections.Specialized;
 using AirQuality.Web.Helpers;
 
 namespace AirQuality.Web.Services
@@ -12,10 +11,13 @@ namespace AirQuality.Web.Services
     public sealed class OpenAqService : IOpenAqService
     {
         private readonly OpenAqConfig _openAqConfig;
+        private readonly ICacheService _cacheService;
 
-        public OpenAqService(IOptions<OpenAqConfig> openAqConfig)
+        public OpenAqService(IOptions<OpenAqConfig> openAqConfig, 
+            ICacheService cacheService)
         {
             _openAqConfig = openAqConfig.Value;
+            _cacheService = cacheService;
         }
 
         /// <inheritdoc />
@@ -65,29 +67,37 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public IList<CitiesRow>? GetAllCities()
+        public IList<CitiesRow> GetAllCities()
         {
+            var cacheValue = _cacheService.CitiesList;
+
+            if (cacheValue.Any())
+                return cacheValue;
+
             // Get first page worth of results
             var citiesResult = GetCitiesResult();
 
             if (citiesResult == null)
                 return null;
 
-            var pageCount = PaginationHelper.GetTotalPageCount(citiesResult.Meta.Found, citiesResult.Meta.Limit);
-
-            if (pageCount <= 1)
-                return citiesResult.Results;
-
             var cities = citiesResult.Results.ToList();
 
-            // Get remaining pages of results
-            for (var i = 2; i <= pageCount; i++)
-            {
-                citiesResult = GetCitiesResult(page: i);
+            var pageCount = PaginationHelper.GetTotalPageCount(citiesResult.Meta.Found, citiesResult.Meta.Limit);
 
-                if (citiesResult != null)
-                    cities.AddRange(citiesResult.Results);
+            if (pageCount > 1)
+            {
+                // Get remaining pages of results
+                for (var i = 2; i <= pageCount; i++)
+                {
+                    citiesResult = GetCitiesResult(page: i);
+
+                    if (citiesResult != null)
+                        cities.AddRange(citiesResult.Results);
+                }
             }
+
+            // Update cache
+            _cacheService.CitiesList = cities;
 
             return cities;
         }

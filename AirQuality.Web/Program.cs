@@ -8,6 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddOptions();
 builder.Services.Configure<OpenAqConfig>(builder.Configuration.GetSection("OpenAq"));
+builder.Services.Configure<CachingConfig>(builder.Configuration.GetSection("Caching"));
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICacheService, CacheService>();
 builder.Services.AddScoped<IOpenAqService, OpenAqService>();
 
 var app = builder.Build();
