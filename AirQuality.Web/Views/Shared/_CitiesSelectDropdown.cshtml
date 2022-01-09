@@ -1,0 +1,31 @@
+﻿@model IList<CitiesRow>
+
+@{
+    if (Model == null)
+    {
+        return;
+    }
+}
+
+@using (Html.BeginForm("Data", "Cities", FormMethod.Post))
+{
+    <div id="city-select"></div>
+
+    <button type="submit">Get air quality data for city</button>
+}
+
+<script>
+    VirtualSelect.init({
+      ele: '#city-select',
+      search: true,
+      name: 'city',
+      options: [
+    @foreach (var city in Model)
+    {
+        var cityName = Html.Encode(city.City);
+        var label = $"{cityName}, {city.Country}";
+        @Html.Raw($"{{ label: '{label}', value: '{cityName}' }},")
+    }
+      ],
+    });
+</script>

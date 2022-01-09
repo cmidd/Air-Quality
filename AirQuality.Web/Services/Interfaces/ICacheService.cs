@@ -1,4 +1,4 @@
-﻿using AirQuality.Web.Models.OpenAq.Responses;
+﻿using AirQuality.Web.Models.OpenAq;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace AirQuality.Web.Services.Interfaces

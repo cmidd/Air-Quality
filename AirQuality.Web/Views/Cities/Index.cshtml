@@ -1,27 +1,16 @@
-﻿@model IList<CitiesRow>
+﻿@model AirQuality.Web.Models.ViewModels.Cities.CitiesViewModel
 @{
     ViewData["Title"] = "Cities";
+
+    if (Model == null)
+    {
+        return;
+    }
 }
-<script src="~/js/virtual-select.min.js"></script>
 
 <h1>@ViewData["Title"]</h1>
 
-<div id="city-select"></div>
-
-<script>
-    VirtualSelect.init({
-      ele: '#city-select',
-      search: true,
-      options: [
-    @foreach (var city in Model)
-    {
-        var cityName = Html.Encode(city.City);
-        var label = $"{cityName}, {city.Country}";
-        @Html.Raw($"{{ label: '{label}', value: '{cityName}' }},")
-    }
-      ],
-    });
-</script>
+@{ Html.RenderPartial("_CitiesSelectDropdown", Model.Cities); }
 
 <table>
     <thead>
@@ -36,9 +25,9 @@
         </tr>
     </thead>
     <tbody>
-        @if (Model.Any())
+        @if (Model.Cities.Any())
         {
-            foreach (var city in Model)
+            foreach (var city in Model.Cities)
             {
                 <tr>
                     <td>@Html.Raw(Html.Encode(city.City))</td>
@@ -53,4 +42,3 @@
         }
     </tbody>
 </table>
-

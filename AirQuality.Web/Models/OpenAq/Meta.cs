@@ -1,4 +1,4 @@
-﻿namespace AirQuality.Web.Models.OpenAq.Responses
+﻿namespace AirQuality.Web.Models.OpenAq
 {
     public record Meta
     {

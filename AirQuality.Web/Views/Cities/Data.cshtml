@@ -1,0 +1,37 @@
+﻿@model AirQuality.Web.Models.ViewModels.Cities.DataViewModel
+@{
+    ViewData["Title"] = "City Data";
+
+    if (Model == null)
+    {
+        return;
+    }
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    Locations for @(Model.City)
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <td>Id</td>
+            <td>Name</td>
+            <td>Coordinates</td>
+            <td>Last Updated</td>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var location in Model.Locations)
+        {
+            <tr>
+                <td>@location.Id</td>
+                <td>@location.Name</td>
+                <td>@location.Coordinates.ToString()</td>
+                <td>@location.LastUpdated.ToShortDateString()</td>
+            </tr>
+        }
+    </tbody>
+</table>

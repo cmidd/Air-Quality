@@ -1,5 +1,5 @@
 ﻿using AirQuality.Web.Models.AppSettings;
-using AirQuality.Web.Models.OpenAq.Responses;
+using AirQuality.Web.Models.OpenAq;
 using AirQuality.Web.Services.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
