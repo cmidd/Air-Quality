@@ -13,12 +13,15 @@ namespace AirQuality.Web.Services
     {
         private readonly OpenAqConfig _openAqConfig;
         private readonly ICacheService _cacheService;
+        private readonly ILogger<OpenAqService> _logger;
 
-        public OpenAqService(IOptions<OpenAqConfig> openAqConfig, 
-            ICacheService cacheService)
+        public OpenAqService(IOptions<OpenAqConfig> openAqConfig,
+            ICacheService cacheService, 
+            ILogger<OpenAqService> logger)
         {
             _openAqConfig = openAqConfig.Value;
             _cacheService = cacheService;
+            _logger = logger;
         }
 
         /// <inheritdoc />
@@ -58,8 +61,7 @@ namespace AirQuality.Web.Services
             }
             catch (Exception ex)
             {
-                // todo: log error
-                var errorMsg = ex.Message;
+                _logger.LogError(ex, $"{nameof(GetCitiesResult)} failed");
                 return null;
             }
         }
@@ -154,8 +156,7 @@ namespace AirQuality.Web.Services
             }
             catch (Exception ex)
             {
-                // todo: log error
-                var errorMsg = ex.Message;
+                _logger.LogError(ex, $"{nameof(GetLocationsResult)} failed");
                 return null;
             }
         }
@@ -213,8 +214,7 @@ namespace AirQuality.Web.Services
             }
             catch (Exception ex)
             {
-                // todo: log error
-                var errorMsg = ex.Message;
+                _logger.LogError(ex, $"{nameof(GetClientResponse)} failed");
                 return string.Empty;
             }
         }

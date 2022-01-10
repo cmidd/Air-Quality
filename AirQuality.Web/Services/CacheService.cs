@@ -13,9 +13,11 @@ namespace AirQuality.Web.Services
         private readonly CachingConfig _cachingConfig;
         private readonly MemoryCacheEntryOptions _citiesListCacheOptions;
         private readonly MemoryCacheEntryOptions _searchHistoryCacheOptions;
+        private readonly ILogger<CacheService> _logger;
 
         public CacheService(IMemoryCache cache,
-            IOptions<CachingConfig> cachingConfig)
+            IOptions<CachingConfig> cachingConfig, 
+            ILogger<CacheService> logger)
         {
             _memoryCache = cache;
             _cachingConfig = cachingConfig.Value;
@@ -23,13 +25,22 @@ namespace AirQuality.Web.Services
                 .SetAbsoluteExpiration(TimeSpan.FromSeconds(_cachingConfig.CitiesListExpiration));
             _searchHistoryCacheOptions = new MemoryCacheEntryOptions()
                 .SetAbsoluteExpiration(TimeSpan.FromSeconds(_cachingConfig.SearchHistoryExpiration));
+            _logger = logger;
         }
 
         public IList<CitiesRow> CitiesList
         {
             get
             {
-                _memoryCache.TryGetValue(_cachingConfig.CitiesListKey, out IList<CitiesRow> cacheValue);
+                if (_memoryCache.TryGetValue(_cachingConfig.CitiesListKey, out IList<CitiesRow> cacheValue))
+                {
+                    _logger.LogInformation("Retrieving cities from cache.");
+                }
+                else
+                {
+                    _logger.LogWarning("No cities found in cache.");
+                }
+
                 return cacheValue ?? new List<CitiesRow>();
             }
             set
@@ -40,6 +51,8 @@ namespace AirQuality.Web.Services
                 _memoryCache.Set(_cachingConfig.CitiesListKey,
                     value,
                     _citiesListCacheOptions);
+
+                _logger.LogInformation("Added list of cities to cache.");
             }
         }
 
@@ -47,7 +60,15 @@ namespace AirQuality.Web.Services
         {
             get
             {
-                _memoryCache.TryGetValue(_cachingConfig.SearchHistoryKey, out IList<HistoryItem> cacheValue);
+                if (_memoryCache.TryGetValue(_cachingConfig.SearchHistoryKey, out IList<HistoryItem> cacheValue))
+                {
+                    _logger.LogInformation("Retrieving search history from cache.");
+                }
+                else
+                {
+                    _logger.LogWarning("No search history found in cache.");
+                }
+
                 return cacheValue ?? new List<HistoryItem>();
             }
             set
@@ -58,6 +79,8 @@ namespace AirQuality.Web.Services
                 _memoryCache.Set(_cachingConfig.SearchHistoryKey,
                     value,
                     _searchHistoryCacheOptions);
+
+                _logger.LogInformation("Added search history to cache.");
             }
         }
     }
