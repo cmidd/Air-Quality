@@ -12,6 +12,7 @@ builder.Services.Configure<CachingConfig>(builder.Configuration.GetSection("Cach
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ICacheService, CacheService>();
 builder.Services.AddScoped<IOpenAqService, OpenAqService>();
+builder.Services.AddScoped<IHistoryService, HistoryService>();
 
 var app = builder.Build();
 

@@ -1,0 +1,43 @@
+﻿@model AirQuality.Web.Models.ViewModels.History.HistoryViewModel
+@{
+    ViewData["Title"] = "History";
+
+    if (Model == null)
+    {
+        return;
+    }
+}
+
+<h1>Recent searches</h1>
+
+<br/>
+
+@Html.ActionLink("Clear search history", "Clear", "History", null, new { @class = "btn btn-primary", @style = "color:white" })
+
+<br/>
+
+<table class="table">
+    <thead>
+        <tr>
+            <td>Date</td>
+            <td>Id</td>
+            <td>Name</td>
+            <td>City</td>
+            <td>Country</td>
+            <td></td>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.HistoryItems)
+        {
+            <tr>
+                <td>@item.Date.ToShortDateString()</td>
+                <td>@item.Id</td>
+                <td>@item.Location</td>
+                <td>@item.City</td>
+                <td>@item.Country</td>
+                <td>@Html.ActionLink("View data", "Data", "Location", new { @locationId = item.Id }, new { @class = "btn btn-primary", @style = "color:white" })</td>
+            </tr>
+        }
+    </tbody>
+</table>

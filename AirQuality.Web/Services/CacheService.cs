@@ -1,4 +1,5 @@
-﻿using AirQuality.Web.Models.AppSettings;
+﻿using AirQuality.Web.Models;
+using AirQuality.Web.Models.AppSettings;
 using AirQuality.Web.Models.OpenAq;
 using AirQuality.Web.Services.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
@@ -11,7 +12,7 @@ namespace AirQuality.Web.Services
         private readonly IMemoryCache _memoryCache;
         private readonly CachingConfig _cachingConfig;
         private readonly MemoryCacheEntryOptions _citiesListCacheOptions;
-        private readonly MemoryCacheEntryOptions _citiesSearchHistoryCacheOptions;
+        private readonly MemoryCacheEntryOptions _searchHistoryCacheOptions;
 
         public CacheService(IMemoryCache cache,
             IOptions<CachingConfig> cachingConfig)
@@ -20,8 +21,8 @@ namespace AirQuality.Web.Services
             _cachingConfig = cachingConfig.Value;
             _citiesListCacheOptions = new MemoryCacheEntryOptions()
                 .SetAbsoluteExpiration(TimeSpan.FromSeconds(_cachingConfig.CitiesListExpiration));
-            _citiesSearchHistoryCacheOptions = new MemoryCacheEntryOptions()
-                .SetAbsoluteExpiration(TimeSpan.FromSeconds(_cachingConfig.CitiesSearchHistoryExpiration));
+            _searchHistoryCacheOptions = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromSeconds(_cachingConfig.SearchHistoryExpiration));
         }
 
         public IList<CitiesRow> CitiesList
@@ -42,21 +43,21 @@ namespace AirQuality.Web.Services
             }
         }
 
-        public IList<CitiesRow> CitiesSearchHistory
+        public IList<HistoryItem> SearchHistory
         {
             get
             {
-                _memoryCache.TryGetValue(_cachingConfig.CitiesSearchHistoryKey, out IList<CitiesRow> cacheValue);
-                return cacheValue ?? new List<CitiesRow>();
+                _memoryCache.TryGetValue(_cachingConfig.SearchHistoryKey, out IList<HistoryItem> cacheValue);
+                return cacheValue ?? new List<HistoryItem>();
             }
             set
             {
                 if (value == null)
                     return;
 
-                _memoryCache.Set(_cachingConfig.CitiesSearchHistoryKey,
+                _memoryCache.Set(_cachingConfig.SearchHistoryKey,
                     value,
-                    _citiesSearchHistoryCacheOptions);
+                    _searchHistoryCacheOptions);
             }
         }
     }
