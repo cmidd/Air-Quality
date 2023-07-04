@@ -43,6 +43,7 @@ namespace AirQuality.Web.Services
 
             // Request data from client
             var response = GetClientResponse(_openAqConfig.Endpoints.Cities, query);
+            var response = GetClientResponse(_openAqConfig.Endpoints.Cities, query, _openAqConfig.ApiKey);
 
             // Deserialize client response
             try
@@ -138,6 +139,7 @@ namespace AirQuality.Web.Services
 
             // Request data from client
             var response = GetClientResponse(_openAqConfig.Endpoints.Locations, query);
+            var response = GetClientResponse(_openAqConfig.Endpoints.Locations, query, _openAqConfig.ApiKey);
 
             // Deserialize client response
             try
@@ -180,7 +182,7 @@ namespace AirQuality.Web.Services
             return locationsResult?.Results?.FirstOrDefault() ?? new LocationsRow();
         }
 
-        private string GetClientResponse(string endpoint, string? query = null)
+        private string GetClientResponse(string endpoint, string? query = null, string apiKey = null)
         {
             try
             {
@@ -190,6 +192,9 @@ namespace AirQuality.Web.Services
                 };
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                    client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
 
                 if (!string.IsNullOrWhiteSpace(query))
                     endpoint += $"?{query}";
