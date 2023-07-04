@@ -15,12 +15,12 @@ namespace AirQuality.Web.Controllers
 
         [HttpGet]
         [HttpPost]
-        public ActionResult Data(string city = "")
+        public async Task<ActionResult> Data(string city = "")
         {
             var model = new CitiesDataViewModel()
             {
                 City = city,
-                Locations = _openAqApiService.GetLocations(city)
+                Locations = await _openAqApiService.GetLocations(city)
             };
 
             return View(model);

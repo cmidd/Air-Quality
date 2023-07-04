@@ -33,7 +33,7 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public CitiesResult? GetCitiesResult(CitiesParams citiesParams)
+        public async Task<CitiesResult?> GetCitiesResult(CitiesParams citiesParams)
         {
             var openAqCitiesResult = new CitiesResult();
 
@@ -41,7 +41,7 @@ namespace AirQuality.Web.Services
             var query = citiesParams.ToQueryString();
 
             // Request data from client
-            var response = GetClientResponse(_openAqConfig.Endpoints.Cities, query, _openAqConfig.ApiKey);
+            var response = await GetClientResponse(_openAqConfig.Endpoints.Cities, query, _openAqConfig.ApiKey);
 
             // Deserialize client response
             try
@@ -63,17 +63,17 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public List<CitiesRow> GetAllCities()
+        public async Task<List<CitiesRow>> GetAllCities()
         {
             var cacheKey = string.Format(_cacheService.CacheConfig.CitiesKey, "--all--");
-            var cachedValue = _cacheService.GetAsync<List<CitiesRow>>(cacheKey)?.Result;
+            var cachedValue = await _cacheService.GetAsync<List<CitiesRow>>(cacheKey);
             if (cachedValue != null)
             {
                 return cachedValue;
             }
 
             // Get first page worth of results
-            var citiesResult = GetCitiesResult(new CitiesParams());
+            var citiesResult = await GetCitiesResult(new CitiesParams());
 
             if (citiesResult == null)
                 return new List<CitiesRow>();
@@ -87,7 +87,7 @@ namespace AirQuality.Web.Services
                 // Get remaining pages of results
                 for (var i = 2; i <= pageCount; i++)
                 {
-                    citiesResult = GetCitiesResult(new CitiesParams()
+                    citiesResult = await GetCitiesResult(new CitiesParams()
                     {
                         Page = 1
                     });
@@ -98,13 +98,13 @@ namespace AirQuality.Web.Services
             }
 
             // Update cache
-            _cacheService.SetAsync(cities, cacheKey);
+            await _cacheService.SetAsync(cities, cacheKey);
 
             return cities;
         }
 
         /// <inheritdoc />
-        public LocationsResult? GetLocationsResult(LocationsParams locationsParams)
+        public async Task<LocationsResult?> GetLocationsResult(LocationsParams locationsParams)
         {
             var locationsResult = new LocationsResult();
 
@@ -112,7 +112,7 @@ namespace AirQuality.Web.Services
             var query = locationsParams.ToQueryString();
 
             // Request data from client
-            var response = GetClientResponse(_openAqConfig.Endpoints.Locations, query, _openAqConfig.ApiKey);
+            var response = await GetClientResponse(_openAqConfig.Endpoints.Locations, query, _openAqConfig.ApiKey);
 
             // Deserialize client response
             try
@@ -134,10 +134,10 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public List<LocationsRow> GetLocations(string city)
+        public async Task<List<LocationsRow>> GetLocations(string city)
         {
             var cacheKey = string.Format(_cacheService.CacheConfig.LocationsKey, city?.ToLower() ?? "--all--");
-            var cachedValue = _cacheService.GetAsync<List<LocationsRow>>(cacheKey).Result;
+            var cachedValue = await _cacheService.GetAsync<List<LocationsRow>>(cacheKey);
             if (cachedValue != null)
             {
                 return cachedValue;
@@ -146,7 +146,7 @@ namespace AirQuality.Web.Services
             if (string.IsNullOrWhiteSpace(city))
                 return new List<LocationsRow>();
 
-            var locationsResult = GetLocationsResult(new LocationsParams()
+            var locationsResult = await GetLocationsResult(new LocationsParams()
             {
                 Cities = new string[1] { city }
             });
@@ -155,7 +155,7 @@ namespace AirQuality.Web.Services
 
             if (results != null && results.Any())
             {
-                _cacheService.SetAsync(results, cacheKey);
+                await _cacheService.SetAsync(results, cacheKey);
                 return results;
             }
 
@@ -163,16 +163,16 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public LocationsRow GetLocation(int id)
+        public async Task<LocationsRow> GetLocation(int id)
         {
             var cacheKey = string.Format(_cacheService.CacheConfig.LocationsKey, id);
-            var cachedValue = _cacheService.GetAsync<LocationsRow>(cacheKey).Result;
+            var cachedValue = await _cacheService.GetAsync<LocationsRow>(cacheKey);
             if (cachedValue != null)
             {
                 return cachedValue;
             }
 
-            var locationsResult = GetLocationsResult(new LocationsParams()
+            var locationsResult = await GetLocationsResult(new LocationsParams()
             {
                 LocationId = id
             });
@@ -181,14 +181,14 @@ namespace AirQuality.Web.Services
 
             if (result != null)
             {
-                _cacheService.SetAsync(result, cacheKey);
+                await _cacheService.SetAsync(result, cacheKey);
                 return result;
             }
 
             return new LocationsRow();
         }
 
-        private string GetClientResponse(string endpoint, string? query = null, string apiKey = null)
+        private async Task<string> GetClientResponse(string endpoint, string? query = null, string apiKey = null)
         {
             try
             {
@@ -205,8 +205,12 @@ namespace AirQuality.Web.Services
                 if (!string.IsNullOrWhiteSpace(query))
                     endpoint += $"?{query}";
 
-                var request = client.GetAsync(endpoint);
-                var response = request.Result;
+                var response = await client.GetAsync(endpoint);
+
+                if (response == null)
+                {
+                    throw new Exception($"Request to {client.BaseAddress} failed. Client returned null response.");
+                }
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -215,7 +219,7 @@ namespace AirQuality.Web.Services
                     throw new Exception($"Request to {client.BaseAddress} failed. Client returned {response.StatusCode}: {response.ReasonPhrase}.");
                 }
 
-                string? result = response.Content?.ReadAsStringAsync()?.Result;
+                string? result = await response.Content?.ReadAsStringAsync() ?? string.Empty;
 
                 if (string.IsNullOrWhiteSpace(result))
                     throw new Exception($"Request to {client.BaseAddress} failed. Client returned empty content");

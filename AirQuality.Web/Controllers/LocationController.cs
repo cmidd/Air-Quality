@@ -17,13 +17,13 @@ namespace AirQuality.Web.Controllers
             _historyService = historyService;
         }
 
-        public ActionResult Data(int? locationId = null)
+        public async Task<ActionResult> Data(int? locationId = null)
         {
             if (locationId == null)
                 return View(new LocationDataViewModel());
 
             // Obtain location
-            var location = _openAqApiService.GetLocation(locationId.Value);
+            var location = await _openAqApiService.GetLocation(locationId.Value);
 
             // Obtain air quality readings from location
             var measurements = location.Parameters
@@ -33,7 +33,7 @@ namespace AirQuality.Web.Controllers
             var userId = Request.Cookies[Constants.UserIdCookie] ?? Guid.NewGuid().ToString();
 
             // Update history with this search
-            _historyService.AddToHistory(userId, new HistoryItem(location));
+            await _historyService.AddToHistory(userId, new HistoryItem(location));
 
             var model = new LocationDataViewModel()
             {

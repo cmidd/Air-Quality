@@ -13,11 +13,11 @@ namespace AirQuality.Web.Controllers
             _openAqApiService = openAqApiService;
         }
 
-        public ActionResult Index()
+        public async Task<ActionResult> Index()
         {
             var model = new CitiesViewModel()
             {
-                Cities = _openAqApiService.GetAllCities()
+                Cities = await _openAqApiService.GetAllCities()
             };
 
             return View(model);
