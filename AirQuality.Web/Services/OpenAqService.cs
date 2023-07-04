@@ -6,6 +6,7 @@ using System.Text.Json;
 using AirQuality.Web.Models.OpenAq;
 using AirQuality.Web.Helpers;
 using AirQuality.Web.Extensions;
+using AirQuality.Web.Data.Converters;
 
 namespace AirQuality.Web.Services
 {
@@ -14,6 +15,7 @@ namespace AirQuality.Web.Services
         private readonly OpenAqConfig _openAqConfig;
         private readonly ICacheService _cacheService;
         private readonly ILogger<OpenAqService> _logger;
+        private readonly JsonSerializerOptions _jsonSerializerOptions;
 
         public OpenAqService(IOptions<OpenAqConfig> openAqConfig,
             ICacheService cacheService, 
@@ -22,6 +24,12 @@ namespace AirQuality.Web.Services
             _openAqConfig = openAqConfig.Value;
             _cacheService = cacheService;
             _logger = logger;
+
+            _jsonSerializerOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            _jsonSerializerOptions.Converters.Add(new OpenAqDateTimeConverter());
         }
 
         /// <inheritdoc />
@@ -42,16 +50,12 @@ namespace AirQuality.Web.Services
             var query = BuildCitiesQuery(limit, page, offset, sort, countryId, countries, cities, orderBy, entity);
 
             // Request data from client
-            var response = GetClientResponse(_openAqConfig.Endpoints.Cities, query);
             var response = GetClientResponse(_openAqConfig.Endpoints.Cities, query, _openAqConfig.ApiKey);
 
             // Deserialize client response
             try
             {
-                openAqCitiesResult = JsonSerializer.Deserialize<CitiesResult>(response, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                openAqCitiesResult = JsonSerializer.Deserialize<CitiesResult>(response, _jsonSerializerOptions);
 
                 if (openAqCitiesResult == null)
                 {
@@ -138,16 +142,12 @@ namespace AirQuality.Web.Services
                 locations, orderBy, isMobile, isAnalysis, sourceNames, entity, sensorType, modelNames, manufacturerNames, dumpRaw);
 
             // Request data from client
-            var response = GetClientResponse(_openAqConfig.Endpoints.Locations, query);
             var response = GetClientResponse(_openAqConfig.Endpoints.Locations, query, _openAqConfig.ApiKey);
 
             // Deserialize client response
             try
             {
-                locationsResult = JsonSerializer.Deserialize<LocationsResult>(response, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                locationsResult = JsonSerializer.Deserialize<LocationsResult>(response, _jsonSerializerOptions);
 
                 if (locationsResult == null)
                 {
@@ -206,8 +206,7 @@ namespace AirQuality.Web.Services
                 {
                     var errors = JsonSerializer.Deserialize<HttpValidationError>(response.Content.ReadAsStringAsync().Result);
 
-                    throw new Exception($"Request to {client.BaseAddress} failed. " +
-                        $"Client returned {response.StatusCode}: {response.ReasonPhrase}.");
+                    throw new Exception($"Request to {client.BaseAddress} failed. Client returned {response.StatusCode}: {response.ReasonPhrase}.");
                 }
 
                 string? result = response.Content?.ReadAsStringAsync()?.Result;

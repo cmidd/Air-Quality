@@ -23,10 +23,10 @@ namespace AirQuality.Web.Models.OpenAq
         public IList<Source> Sources { get; set; } = new List<Source>();
 
         [JsonPropertyName("isMobile")]
-        public bool IsMobile { get; set; }
+        public bool? IsMobile { get; set; }
 
         [JsonPropertyName("isAnalysis")]
-        public bool IsAnalysis { get; set; }
+        public bool? IsAnalysis { get; set; }
 
         [JsonPropertyName("parameters")]
         public IList<ParametersRow> Parameters { get; set; } = new List<ParametersRow>();
