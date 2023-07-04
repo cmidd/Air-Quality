@@ -30,6 +30,7 @@
             <td>First Updated</td>
             <td>Last Updated</td>
             <td>Parameters</td>
+            <td></td>
         </tr>
     </thead>
     <tbody>
@@ -45,6 +46,7 @@
                     <td>@city.FirstUpdated.ToShortDateString()</td>
                     <td>@city.LastUpdated.ToShortDateString()</td>
                     <td>@string.Join(", ", city.Parameters)</td>
+                    <td>@Html.ActionLink("View locations", "Data", "Cities", new { @city = city.City }, new { @class = "btn btn-primary", @style = "color:white" })</td>
                 </tr>
             }
         }
