@@ -2,9 +2,10 @@
 {
     public class CachingConfig
     {
-        public string CitiesListKey { get; set; } = string.Empty;
-        public int CitiesListExpiration { get; set; }
-        public string SearchHistoryKey { get; set; } = string.Empty;
-        public int SearchHistoryExpiration { get; set; }
+        public string RedisCacheUrl { get; set; } = string.Empty;
+        public string CitiesKey { get; set; } = "cities:{0}";
+        public string LocationsKey { get; set; } = "locations:{0}";
+        public string SearchHistoryKey { get; set; } = "searchhistory:{0}";
+        public int CacheKeyExpirationInSeconds { get; set; } = 86400;
     }
 }

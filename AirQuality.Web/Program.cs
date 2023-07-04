@@ -17,6 +17,11 @@ builder.Services.AddScoped<IHistoryService, HistoryService>();
 builder.Logging.ClearProviders();
 builder.Logging.SetMinimumLevel(LogLevel.Trace);
 
+builder.Services.AddStackExchangeRedisCache(options => 
+{ 
+    options.Configuration = builder.Configuration.GetValue<string>("Caching:RedisCacheUrl"); 
+});
+
 var app = builder.Build();
 
 var loggerFactory = app.Services.GetService<ILoggerFactory>();

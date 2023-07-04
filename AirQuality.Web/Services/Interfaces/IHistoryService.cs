@@ -4,8 +4,8 @@ namespace AirQuality.Web.Services.Interfaces
 {
     public interface IHistoryService
     {
-        void AddToHistory(HistoryItem item);
-        IList<HistoryItem> GetHistory();
-        void ClearHistory();
+        void AddToHistory(string userId, HistoryItem item);
+        List<HistoryItem> GetHistory(string userId);
+        void ClearHistory(string userId);
     }
 }

@@ -12,7 +12,7 @@ namespace AirQuality.Web.Services.Interfaces
         /// <summary>
         /// Obtain entire list of cities available which have Air Quality data
         /// </summary>
-        IList<CitiesRow> GetAllCities();
+        List<CitiesRow> GetAllCities();
 
         /// <summary>
         /// Obtain list of locations which have a sensor to measure air quality
@@ -23,7 +23,7 @@ namespace AirQuality.Web.Services.Interfaces
         /// Obtain list of locations for the given city
         /// </summary>
         /// <param name="city">Name of the city to get locations for</param>
-        IList<LocationsRow> GetLocations(string city);
+        List<LocationsRow> GetLocations(string city);
 
         /// <summary>
         /// Obtain data on one location

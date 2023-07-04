@@ -30,8 +30,10 @@ namespace AirQuality.Web.Controllers
                 .Select(p => new Measurement(p))
                 .ToList();
 
+            var userId = Request.Cookies[Constants.UserIdCookie] ?? Guid.NewGuid().ToString();
+
             // Update history with this search
-            _historyService.AddToHistory(new HistoryItem(location));
+            _historyService.AddToHistory(userId, new HistoryItem(location));
 
             var model = new LocationDataViewModel()
             {

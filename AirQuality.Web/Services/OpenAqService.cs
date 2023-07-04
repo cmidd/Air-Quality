@@ -63,12 +63,14 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public IList<CitiesRow> GetAllCities()
+        public List<CitiesRow> GetAllCities()
         {
-            var cacheValue = _cacheService.CitiesList;
-
-            if (cacheValue.Any())
-                return cacheValue;
+            var cacheKey = string.Format(_cacheService.CacheConfig.CitiesKey, "--all--");
+            var cachedValue = _cacheService.GetAsync<List<CitiesRow>>(cacheKey)?.Result;
+            if (cachedValue != null)
+            {
+                return cachedValue;
+            }
 
             // Get first page worth of results
             var citiesResult = GetCitiesResult(new CitiesParams());
@@ -85,9 +87,9 @@ namespace AirQuality.Web.Services
                 // Get remaining pages of results
                 for (var i = 2; i <= pageCount; i++)
                 {
-                    citiesResult = GetCitiesResult(new CitiesParams() 
-                    { 
-                        Page = 1 
+                    citiesResult = GetCitiesResult(new CitiesParams()
+                    {
+                        Page = 1
                     });
 
                     if (citiesResult != null)
@@ -96,7 +98,7 @@ namespace AirQuality.Web.Services
             }
 
             // Update cache
-            _cacheService.CitiesList = cities;
+            _cacheService.SetAsync(cities, cacheKey);
 
             return cities;
         }
@@ -132,8 +134,15 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public IList<LocationsRow> GetLocations(string city)
+        public List<LocationsRow> GetLocations(string city)
         {
+            var cacheKey = string.Format(_cacheService.CacheConfig.LocationsKey, city?.ToLower() ?? "--all--");
+            var cachedValue = _cacheService.GetAsync<List<LocationsRow>>(cacheKey).Result;
+            if (cachedValue != null)
+            {
+                return cachedValue;
+            }
+
             if (string.IsNullOrWhiteSpace(city))
                 return new List<LocationsRow>();
 
@@ -142,18 +151,41 @@ namespace AirQuality.Web.Services
                 Cities = new string[1] { city }
             });
 
-            return locationsResult?.Results ?? new List<LocationsRow>();
+            var results = locationsResult?.Results?.ToList();
+
+            if (results != null && results.Any())
+            {
+                _cacheService.SetAsync(results, cacheKey);
+                return results;
+            }
+
+            return new List<LocationsRow>();
         }
 
         /// <inheritdoc />
         public LocationsRow GetLocation(int id)
         {
+            var cacheKey = string.Format(_cacheService.CacheConfig.LocationsKey, id);
+            var cachedValue = _cacheService.GetAsync<LocationsRow>(cacheKey).Result;
+            if (cachedValue != null)
+            {
+                return cachedValue;
+            }
+
             var locationsResult = GetLocationsResult(new LocationsParams()
             {
                 LocationId = id
             });
-                
-            return locationsResult?.Results?.FirstOrDefault() ?? new LocationsRow();
+
+            var result = locationsResult?.Results?.FirstOrDefault();
+
+            if (result != null)
+            {
+                _cacheService.SetAsync(result, cacheKey);
+                return result;
+            }
+
+            return new LocationsRow();
         }
 
         private string GetClientResponse(string endpoint, string? query = null, string apiKey = null)
