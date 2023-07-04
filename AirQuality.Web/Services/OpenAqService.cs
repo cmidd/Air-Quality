@@ -33,21 +33,12 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public CitiesResult? GetCitiesResult(
-            int limit = 100,
-            int page = 1,
-            int offset = 0,
-            SortOrder sort = SortOrder.Ascending,
-            string? countryId = null,
-            string[]? countries = null,
-            string[]? cities = null,
-            CitiesOrder orderBy = CitiesOrder.City,
-            string? entity = null)
+        public CitiesResult? GetCitiesResult(CitiesParams citiesParams)
         {
             var openAqCitiesResult = new CitiesResult();
 
             // Build query string to send to API
-            var query = BuildCitiesQuery(limit, page, offset, sort, countryId, countries, cities, orderBy, entity);
+            var query = citiesParams.ToQueryString();
 
             // Request data from client
             var response = GetClientResponse(_openAqConfig.Endpoints.Cities, query, _openAqConfig.ApiKey);
@@ -80,7 +71,7 @@ namespace AirQuality.Web.Services
                 return cacheValue;
 
             // Get first page worth of results
-            var citiesResult = GetCitiesResult();
+            var citiesResult = GetCitiesResult(new CitiesParams());
 
             if (citiesResult == null)
                 return new List<CitiesRow>();
@@ -94,7 +85,10 @@ namespace AirQuality.Web.Services
                 // Get remaining pages of results
                 for (var i = 2; i <= pageCount; i++)
                 {
-                    citiesResult = GetCitiesResult(page: i);
+                    citiesResult = GetCitiesResult(new CitiesParams() 
+                    { 
+                        Page = 1 
+                    });
 
                     if (citiesResult != null)
                         cities.AddRange(citiesResult.Results);
@@ -108,38 +102,12 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public LocationsResult? GetLocationsResult(
-            int limit = 100,
-            int page = 1,
-            int offset = 0,
-            SortOrder sort = SortOrder.Descending,
-            bool? hasGeo = null,
-            int? parameterId = null,
-            string[]? parameters = null,
-            string[]? units = null,
-            Coordinates? coordinates = null,
-            int radius = 1000,
-            string? countryId = null,
-            string[]? countries = null,
-            string[]? cities = null,
-            int? locationId = null,
-            string[]? locations = null,
-            LocationsOrder orderBy = LocationsOrder.LastUpdated,
-            bool? isMobile = null,
-            bool? isAnalysis = null,
-            string[]? sourceNames = null,
-            string? entity = null,
-            SensorType? sensorType = null,
-            string[]? modelNames = null,
-            string[]? manufacturerNames = null,
-            bool dumpRaw = false)
+        public LocationsResult? GetLocationsResult(LocationsParams locationsParams)
         {
             var locationsResult = new LocationsResult();
 
             // Build query string to send to API
-            var query = BuildLocationsQuery(limit, page, offset, sort, hasGeo, parameterId, 
-                parameters, units, coordinates, radius, countryId, countries, cities, locationId, 
-                locations, orderBy, isMobile, isAnalysis, sourceNames, entity, sensorType, modelNames, manufacturerNames, dumpRaw);
+            var query = locationsParams.ToQueryString();
 
             // Request data from client
             var response = GetClientResponse(_openAqConfig.Endpoints.Locations, query, _openAqConfig.ApiKey);
@@ -169,7 +137,10 @@ namespace AirQuality.Web.Services
             if (string.IsNullOrWhiteSpace(city))
                 return new List<LocationsRow>();
 
-            var locationsResult = GetLocationsResult(cities: new string[1] { city });
+            var locationsResult = GetLocationsResult(new LocationsParams()
+            {
+                Cities = new string[1] { city }
+            });
 
             return locationsResult?.Results ?? new List<LocationsRow>();
         }
@@ -177,7 +148,10 @@ namespace AirQuality.Web.Services
         /// <inheritdoc />
         public LocationsRow GetLocation(int id)
         {
-            var locationsResult = GetLocationsResult(locationId: id);
+            var locationsResult = GetLocationsResult(new LocationsParams()
+            {
+                LocationId = id
+            });
                 
             return locationsResult?.Results?.FirstOrDefault() ?? new LocationsRow();
         }
@@ -221,116 +195,6 @@ namespace AirQuality.Web.Services
                 _logger.LogError(ex, $"{nameof(GetClientResponse)} failed");
                 return string.Empty;
             }
-        }
-
-        private string BuildCitiesQuery(
-            int limit = 100,
-            int page = 1,
-            int offset = 0,
-            SortOrder sort = SortOrder.Ascending,
-            string? countryId = null,
-            string[]? countries = null,
-            string[]? cities = null,
-            CitiesOrder orderBy = CitiesOrder.City,
-            string? entity = null)
-        {
-            var query = $"limit={limit}&page={page}&offset={offset}&sort={sort.GetName()}&order_by={orderBy.GetName()}";
-
-            if (!string.IsNullOrWhiteSpace(countryId))
-                query += $"&country_id={countryId}";
-
-            if (!string.IsNullOrWhiteSpace(entity))
-                query += $"&entity={entity}";
-
-            if (countries?.Any() == true)
-                query += string.Join("", countries.Select(c => $"&country={c}"));
-
-            if (cities?.Any() == true)
-                query += string.Join("", cities.Select(c => $"&city={c}"));
-
-            return query;
-        }
-
-        private string BuildLocationsQuery(
-            int limit = 100,
-            int page = 1,
-            int offset = 0,
-            SortOrder sort = SortOrder.Descending,
-            bool? hasGeo = null,
-            int? parameterId = null,
-            string[]? parameters = null,
-            string[]? units = null,
-            Coordinates? coordinates = null,
-            int radius = 1000,
-            string? countryId = null,
-            string[]? countries = null,
-            string[]? cities = null,
-            int? locationId = null,
-            string[]? locations = null,
-            LocationsOrder orderBy = LocationsOrder.LastUpdated,
-            bool? isMobile = null,
-            bool? isAnalysis = null,
-            string[]? sourceNames = null,
-            string? entity = null,
-            SensorType? sensorType = null,
-            string[]? modelNames = null,
-            string[]? manufacturerNames = null,
-            bool dumpRaw = false)
-        {
-            var query = $"limit={limit}&page={page}&offset={offset}&sort={sort.GetName()}&radius={radius}&order_by={orderBy.GetName()}&dumpRaw={dumpRaw.ToString().ToLower()}";
-
-            if (hasGeo != null)
-                query += $"&has_geo={hasGeo.Value.ToString().ToLower()}";
-
-            if (parameterId != null)
-                query += $"&parameter_id={parameterId.Value}";
-
-            if (parameters?.Any() == true)
-                query += string.Join("", parameters.Select(p => $"&parameter={p}"));
-
-            if (units?.Any() == true)
-                query += string.Join("", units.Select(u => $"&unit={u}"));
-
-            if (coordinates != null)
-                query += $"&coordinates={coordinates.ToString}";
-
-            if (!string.IsNullOrWhiteSpace(countryId))
-                query += $"&country_id={countryId}";
-
-            if (countries?.Any() == true)
-                query += string.Join("", countries.Select(c => $"&country={c}"));
-
-            if (cities?.Any() == true)
-                query += string.Join("", cities.Select(c => $"&city={c}"));
-
-            if (locationId != null)
-                query += $"&location_id={locationId}";
-
-            if (locations?.Any() == true)
-                query += string.Join("", locations.Select(l => $"&location={l}"));
-
-            if (isMobile != null)
-                query += $"&isMobile={isMobile.Value.ToString().ToLower()}";
-
-            if (isAnalysis != null)
-                query += $"&isAnalysis={isAnalysis.Value.ToString().ToLower()}";
-
-            if (sourceNames?.Any() == true)
-                query += string.Join("", sourceNames.Select(sn => $"&sourceName={sn}"));
-
-            if (!string.IsNullOrWhiteSpace(entity))
-                query += $"&entity={entity}";
-
-            if (sensorType != null)
-                query += $"&sensorType={sensorType.Value.GetName()}";
-
-            if (modelNames?.Any() == true)
-                query += string.Join("", modelNames.Select(mn => $"&modelName={mn}"));
-
-            if (manufacturerNames?.Any() == true)
-                query += string.Join("", manufacturerNames.Select(mn => $"&manufacturerName={mn}"));
-
-            return query;
         }
     }
 }
