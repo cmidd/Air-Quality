@@ -1,86 +1,91 @@
-﻿using AirQuality.Web.Models;
-using AirQuality.Web.Models.AppSettings;
-using AirQuality.Web.Models.OpenAq;
+﻿using AirQuality.Web.Models.AppSettings;
 using AirQuality.Web.Services.Interfaces;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
+using System.Text;
 
 namespace AirQuality.Web.Services
 {
     public class CacheService : ICacheService
     {
-        private readonly IMemoryCache _memoryCache;
         private readonly CachingConfig _cachingConfig;
-        private readonly MemoryCacheEntryOptions _citiesListCacheOptions;
-        private readonly MemoryCacheEntryOptions _searchHistoryCacheOptions;
         private readonly ILogger<CacheService> _logger;
+        private readonly IDistributedCache _cache;
 
-        public CacheService(IMemoryCache cache,
-            IOptions<CachingConfig> cachingConfig, 
-            ILogger<CacheService> logger)
+        public CacheService(IOptions<CachingConfig> cachingConfig, 
+            ILogger<CacheService> logger,
+            IDistributedCache cache)
         {
-            _memoryCache = cache;
             _cachingConfig = cachingConfig.Value;
-            _citiesListCacheOptions = new MemoryCacheEntryOptions()
-                .SetAbsoluteExpiration(TimeSpan.FromSeconds(_cachingConfig.CitiesListExpiration));
-            _searchHistoryCacheOptions = new MemoryCacheEntryOptions()
-                .SetAbsoluteExpiration(TimeSpan.FromSeconds(_cachingConfig.SearchHistoryExpiration));
             _logger = logger;
+            _cache = cache;
         }
 
-        public IList<CitiesRow> CitiesList
+        public CachingConfig CacheConfig => _cachingConfig;
+
+        public async Task<T?> GetAsync<T>(string cacheKey)
         {
-            get
+            try
             {
-                if (_memoryCache.TryGetValue(_cachingConfig.CitiesListKey, out IList<CitiesRow> cacheValue))
+                var cachedData = await _cache.GetAsync(cacheKey);
+
+                if (cachedData != null)
                 {
-                    _logger.LogInformation("Retrieving cities from cache.");
-                }
-                else
-                {
-                    _logger.LogWarning("No cities found in cache.");
+                    // If the data is found in the cache, encode and deserialize cached data.
+                    var cachedDataString = Encoding.UTF8.GetString(cachedData);
+                    var data = JsonSerializer.Deserialize<T>(cachedDataString);
+                    return data;
                 }
 
-                return cacheValue ?? new List<CitiesRow>();
+                return default;
             }
-            set
+            catch (Exception ex)
             {
-                if (value == null)
-                    return;
-
-                _memoryCache.Set(_cachingConfig.CitiesListKey,
-                    value,
-                    _citiesListCacheOptions);
-
-                _logger.LogInformation("Added list of cities to cache.");
+                _logger.LogError($"Error when getting cache data using key {cacheKey}: {ex.InnerException}", this);
+                return default;
             }
         }
 
-        public IList<HistoryItem> SearchHistory
+        public async Task<bool> SetAsync<T>(T data, string cacheKey, int expirationInSeconds = 0)
         {
-            get
+            try
             {
-                if (_memoryCache.TryGetValue(_cachingConfig.SearchHistoryKey, out IList<HistoryItem> cacheValue))
-                {
-                    _logger.LogInformation("Retrieving search history from cache.");
-                }
-                else
-                {
-                    _logger.LogWarning("No search history found in cache.");
-                }
+                // Serializing the data
+                string cachedDataString = JsonSerializer.Serialize(data);
+                var dataToCache = Encoding.UTF8.GetBytes(cachedDataString);
 
-                return cacheValue ?? new List<HistoryItem>();
+                if (expirationInSeconds == 0)
+                    expirationInSeconds = _cachingConfig.CacheKeyExpirationInSeconds;
+
+                // Setting up the cache options
+                DistributedCacheEntryOptions options = new DistributedCacheEntryOptions()
+                    .SetAbsoluteExpiration(DateTime.Now.AddSeconds(expirationInSeconds));
+
+                // Add the data into the cache
+                await _cache.SetAsync(cacheKey, dataToCache, options);
+
+                return true;
             }
-            set
+            catch (Exception ex)
             {
-                if (value == null)
-                    return;
+                _logger.LogError($"Error when setting cache data for key {cacheKey}: {ex.InnerException}", this);
+                return false;
+            }
+        }
 
-                _memoryCache.Set(_cachingConfig.SearchHistoryKey,
-                    value,
-                    _searchHistoryCacheOptions);
-
-                _logger.LogInformation("Added search history to cache.");
+        public async Task<bool> DeleteAsync(string cacheKey)
+        {
+            try
+            {
+                await _cache.RemoveAsync(cacheKey);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error when deleting cache data for key {cacheKey}: {ex.InnerException}", this);
+                return false;
             }
         }
     }

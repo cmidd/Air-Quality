@@ -6,6 +6,7 @@ using System.Text.Json;
 using AirQuality.Web.Models.OpenAq;
 using AirQuality.Web.Helpers;
 using AirQuality.Web.Extensions;
+using AirQuality.Web.Data.Converters;
 
 namespace AirQuality.Web.Services
 {
@@ -14,6 +15,7 @@ namespace AirQuality.Web.Services
         private readonly OpenAqConfig _openAqConfig;
         private readonly ICacheService _cacheService;
         private readonly ILogger<OpenAqService> _logger;
+        private readonly JsonSerializerOptions _jsonSerializerOptions;
 
         public OpenAqService(IOptions<OpenAqConfig> openAqConfig,
             ICacheService cacheService, 
@@ -22,35 +24,29 @@ namespace AirQuality.Web.Services
             _openAqConfig = openAqConfig.Value;
             _cacheService = cacheService;
             _logger = logger;
+
+            _jsonSerializerOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            _jsonSerializerOptions.Converters.Add(new OpenAqDateTimeConverter());
         }
 
         /// <inheritdoc />
-        public CitiesResult? GetCitiesResult(
-            int limit = 100,
-            int page = 1,
-            int offset = 0,
-            SortOrder sort = SortOrder.Ascending,
-            string? countryId = null,
-            string[]? countries = null,
-            string[]? cities = null,
-            CitiesOrder orderBy = CitiesOrder.City,
-            string? entity = null)
+        public async Task<CitiesResult?> GetCitiesResult(CitiesParams citiesParams)
         {
             var openAqCitiesResult = new CitiesResult();
 
             // Build query string to send to API
-            var query = BuildCitiesQuery(limit, page, offset, sort, countryId, countries, cities, orderBy, entity);
+            var query = citiesParams.ToQueryString();
 
             // Request data from client
-            var response = GetClientResponse(_openAqConfig.Endpoints.Cities, query);
+            var response = await GetClientResponse(_openAqConfig.Endpoints.Cities, query, _openAqConfig.ApiKey);
 
             // Deserialize client response
             try
             {
-                openAqCitiesResult = JsonSerializer.Deserialize<CitiesResult>(response, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                openAqCitiesResult = JsonSerializer.Deserialize<CitiesResult>(response, _jsonSerializerOptions);
 
                 if (openAqCitiesResult == null)
                 {
@@ -67,15 +63,17 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public IList<CitiesRow> GetAllCities()
+        public async Task<List<CitiesRow>> GetAllCities()
         {
-            var cacheValue = _cacheService.CitiesList;
-
-            if (cacheValue.Any())
-                return cacheValue;
+            var cacheKey = string.Format(_cacheService.CacheConfig.CitiesKey, "--all--");
+            var cachedValue = await _cacheService.GetAsync<List<CitiesRow>>(cacheKey);
+            if (cachedValue != null)
+            {
+                return cachedValue;
+            }
 
             // Get first page worth of results
-            var citiesResult = GetCitiesResult();
+            var citiesResult = await GetCitiesResult(new CitiesParams());
 
             if (citiesResult == null)
                 return new List<CitiesRow>();
@@ -89,7 +87,10 @@ namespace AirQuality.Web.Services
                 // Get remaining pages of results
                 for (var i = 2; i <= pageCount; i++)
                 {
-                    citiesResult = GetCitiesResult(page: i);
+                    citiesResult = await GetCitiesResult(new CitiesParams()
+                    {
+                        Page = 1
+                    });
 
                     if (citiesResult != null)
                         cities.AddRange(citiesResult.Results);
@@ -97,55 +98,26 @@ namespace AirQuality.Web.Services
             }
 
             // Update cache
-            _cacheService.CitiesList = cities;
+            await _cacheService.SetAsync(cities, cacheKey);
 
             return cities;
         }
 
         /// <inheritdoc />
-        public LocationsResult? GetLocationsResult(
-            int limit = 100,
-            int page = 1,
-            int offset = 0,
-            SortOrder sort = SortOrder.Descending,
-            bool? hasGeo = null,
-            int? parameterId = null,
-            string[]? parameters = null,
-            string[]? units = null,
-            Coordinates? coordinates = null,
-            int radius = 1000,
-            string? countryId = null,
-            string[]? countries = null,
-            string[]? cities = null,
-            int? locationId = null,
-            string[]? locations = null,
-            LocationsOrder orderBy = LocationsOrder.LastUpdated,
-            bool? isMobile = null,
-            bool? isAnalysis = null,
-            string[]? sourceNames = null,
-            string? entity = null,
-            SensorType? sensorType = null,
-            string[]? modelNames = null,
-            string[]? manufacturerNames = null,
-            bool dumpRaw = false)
+        public async Task<LocationsResult?> GetLocationsResult(LocationsParams locationsParams)
         {
             var locationsResult = new LocationsResult();
 
             // Build query string to send to API
-            var query = BuildLocationsQuery(limit, page, offset, sort, hasGeo, parameterId, 
-                parameters, units, coordinates, radius, countryId, countries, cities, locationId, 
-                locations, orderBy, isMobile, isAnalysis, sourceNames, entity, sensorType, modelNames, manufacturerNames, dumpRaw);
+            var query = locationsParams.ToQueryString();
 
             // Request data from client
-            var response = GetClientResponse(_openAqConfig.Endpoints.Locations, query);
+            var response = await GetClientResponse(_openAqConfig.Endpoints.Locations, query, _openAqConfig.ApiKey);
 
             // Deserialize client response
             try
             {
-                locationsResult = JsonSerializer.Deserialize<LocationsResult>(response, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                locationsResult = JsonSerializer.Deserialize<LocationsResult>(response, _jsonSerializerOptions);
 
                 if (locationsResult == null)
                 {
@@ -162,25 +134,61 @@ namespace AirQuality.Web.Services
         }
 
         /// <inheritdoc />
-        public IList<LocationsRow> GetLocations(string city)
+        public async Task<List<LocationsRow>> GetLocations(string city)
         {
+            var cacheKey = string.Format(_cacheService.CacheConfig.LocationsKey, city?.ToLower() ?? "--all--");
+            var cachedValue = await _cacheService.GetAsync<List<LocationsRow>>(cacheKey);
+            if (cachedValue != null)
+            {
+                return cachedValue;
+            }
+
             if (string.IsNullOrWhiteSpace(city))
                 return new List<LocationsRow>();
 
-            var locationsResult = GetLocationsResult(cities: new string[1] { city });
+            var locationsResult = await GetLocationsResult(new LocationsParams()
+            {
+                Cities = new string[1] { city }
+            });
 
-            return locationsResult?.Results ?? new List<LocationsRow>();
+            var results = locationsResult?.Results?.ToList();
+
+            if (results != null && results.Any())
+            {
+                await _cacheService.SetAsync(results, cacheKey);
+                return results;
+            }
+
+            return new List<LocationsRow>();
         }
 
         /// <inheritdoc />
-        public LocationsRow GetLocation(int id)
+        public async Task<LocationsRow> GetLocation(int id)
         {
-            var locationsResult = GetLocationsResult(locationId: id);
-                
-            return locationsResult?.Results?.FirstOrDefault() ?? new LocationsRow();
+            var cacheKey = string.Format(_cacheService.CacheConfig.LocationsKey, id);
+            var cachedValue = await _cacheService.GetAsync<LocationsRow>(cacheKey);
+            if (cachedValue != null)
+            {
+                return cachedValue;
+            }
+
+            var locationsResult = await GetLocationsResult(new LocationsParams()
+            {
+                LocationId = id
+            });
+
+            var result = locationsResult?.Results?.FirstOrDefault();
+
+            if (result != null)
+            {
+                await _cacheService.SetAsync(result, cacheKey);
+                return result;
+            }
+
+            return new LocationsRow();
         }
 
-        private string GetClientResponse(string endpoint, string? query = null)
+        private async Task<string> GetClientResponse(string endpoint, string? query = null, string apiKey = null)
         {
             try
             {
@@ -191,21 +199,27 @@ namespace AirQuality.Web.Services
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                    client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+
                 if (!string.IsNullOrWhiteSpace(query))
                     endpoint += $"?{query}";
 
-                var request = client.GetAsync(endpoint);
-                var response = request.Result;
+                var response = await client.GetAsync(endpoint);
+
+                if (response == null)
+                {
+                    throw new Exception($"Request to {client.BaseAddress} failed. Client returned null response.");
+                }
 
                 if (!response.IsSuccessStatusCode)
                 {
                     var errors = JsonSerializer.Deserialize<HttpValidationError>(response.Content.ReadAsStringAsync().Result);
 
-                    throw new Exception($"Request to {client.BaseAddress} failed. " +
-                        $"Client returned {response.StatusCode}: {response.ReasonPhrase}.");
+                    throw new Exception($"Request to {client.BaseAddress} failed. Client returned {response.StatusCode}: {response.ReasonPhrase}.");
                 }
 
-                string? result = response.Content?.ReadAsStringAsync()?.Result;
+                string? result = await response.Content?.ReadAsStringAsync() ?? string.Empty;
 
                 if (string.IsNullOrWhiteSpace(result))
                     throw new Exception($"Request to {client.BaseAddress} failed. Client returned empty content");
@@ -217,116 +231,6 @@ namespace AirQuality.Web.Services
                 _logger.LogError(ex, $"{nameof(GetClientResponse)} failed");
                 return string.Empty;
             }
-        }
-
-        private string BuildCitiesQuery(
-            int limit = 100,
-            int page = 1,
-            int offset = 0,
-            SortOrder sort = SortOrder.Ascending,
-            string? countryId = null,
-            string[]? countries = null,
-            string[]? cities = null,
-            CitiesOrder orderBy = CitiesOrder.City,
-            string? entity = null)
-        {
-            var query = $"limit={limit}&page={page}&offset={offset}&sort={sort.GetName()}&order_by={orderBy.GetName()}";
-
-            if (!string.IsNullOrWhiteSpace(countryId))
-                query += $"&country_id={countryId}";
-
-            if (!string.IsNullOrWhiteSpace(entity))
-                query += $"&entity={entity}";
-
-            if (countries?.Any() == true)
-                query += string.Join("", countries.Select(c => $"&country={c}"));
-
-            if (cities?.Any() == true)
-                query += string.Join("", cities.Select(c => $"&city={c}"));
-
-            return query;
-        }
-
-        private string BuildLocationsQuery(
-            int limit = 100,
-            int page = 1,
-            int offset = 0,
-            SortOrder sort = SortOrder.Descending,
-            bool? hasGeo = null,
-            int? parameterId = null,
-            string[]? parameters = null,
-            string[]? units = null,
-            Coordinates? coordinates = null,
-            int radius = 1000,
-            string? countryId = null,
-            string[]? countries = null,
-            string[]? cities = null,
-            int? locationId = null,
-            string[]? locations = null,
-            LocationsOrder orderBy = LocationsOrder.LastUpdated,
-            bool? isMobile = null,
-            bool? isAnalysis = null,
-            string[]? sourceNames = null,
-            string? entity = null,
-            SensorType? sensorType = null,
-            string[]? modelNames = null,
-            string[]? manufacturerNames = null,
-            bool dumpRaw = false)
-        {
-            var query = $"limit={limit}&page={page}&offset={offset}&sort={sort.GetName()}&radius={radius}&order_by={orderBy.GetName()}&dumpRaw={dumpRaw.ToString().ToLower()}";
-
-            if (hasGeo != null)
-                query += $"&has_geo={hasGeo.Value.ToString().ToLower()}";
-
-            if (parameterId != null)
-                query += $"&parameter_id={parameterId.Value}";
-
-            if (parameters?.Any() == true)
-                query += string.Join("", parameters.Select(p => $"&parameter={p}"));
-
-            if (units?.Any() == true)
-                query += string.Join("", units.Select(u => $"&unit={u}"));
-
-            if (coordinates != null)
-                query += $"&coordinates={coordinates.ToString}";
-
-            if (!string.IsNullOrWhiteSpace(countryId))
-                query += $"&country_id={countryId}";
-
-            if (countries?.Any() == true)
-                query += string.Join("", countries.Select(c => $"&country={c}"));
-
-            if (cities?.Any() == true)
-                query += string.Join("", cities.Select(c => $"&city={c}"));
-
-            if (locationId != null)
-                query += $"&location_id={locationId}";
-
-            if (locations?.Any() == true)
-                query += string.Join("", locations.Select(l => $"&location={l}"));
-
-            if (isMobile != null)
-                query += $"&isMobile={isMobile.Value.ToString().ToLower()}";
-
-            if (isAnalysis != null)
-                query += $"&isAnalysis={isAnalysis.Value.ToString().ToLower()}";
-
-            if (sourceNames?.Any() == true)
-                query += string.Join("", sourceNames.Select(sn => $"&sourceName={sn}"));
-
-            if (!string.IsNullOrWhiteSpace(entity))
-                query += $"&entity={entity}";
-
-            if (sensorType != null)
-                query += $"&sensorType={sensorType.Value.GetName()}";
-
-            if (modelNames?.Any() == true)
-                query += string.Join("", modelNames.Select(mn => $"&modelName={mn}"));
-
-            if (manufacturerNames?.Any() == true)
-                query += string.Join("", manufacturerNames.Select(mn => $"&manufacturerName={mn}"));
-
-            return query;
         }
     }
 }

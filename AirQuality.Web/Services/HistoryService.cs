@@ -15,20 +15,34 @@ namespace AirQuality.Web.Services
             _logger = logger;
         }
 
-        public IList<HistoryItem> GetHistory() => _cacheService.SearchHistory;
-
-        public void AddToHistory(HistoryItem item)
+        public async Task<List<HistoryItem>> GetHistory(string userId)
         {
-            var searchHistory = _cacheService.SearchHistory;
+            var cacheKey = string.Format(_cacheService.CacheConfig.SearchHistoryKey, userId);
+            var searchHistory = await _cacheService.GetAsync<List<HistoryItem>>(cacheKey);
+            return searchHistory ?? new List<HistoryItem>();
+        }
+
+        public async Task AddToHistory(string userId, HistoryItem item)
+        {
+            var cacheKey = string.Format(_cacheService.CacheConfig.SearchHistoryKey, userId);
+            var searchHistory = await _cacheService.GetAsync<List<HistoryItem>>(cacheKey);
+            if (searchHistory == null)
+            {
+                searchHistory = new List<HistoryItem>();
+            }
 
             // Add the new item to the top of the list
             searchHistory.Insert(0, item);
 
-            _logger.LogInformation($"Added location {item.Id} to search history");
+            _logger.LogInformation($"Added location {item.Id} to search history for user {userId}");
 
-            _cacheService.SearchHistory = searchHistory;
+            await _cacheService.SetAsync(searchHistory, cacheKey);
         }
 
-        public void ClearHistory() => _cacheService.SearchHistory = new List<HistoryItem>();
+        public async Task ClearHistory(string userId)
+        {
+            var cacheKey = string.Format(_cacheService.CacheConfig.SearchHistoryKey, userId);
+            await _cacheService.DeleteAsync(cacheKey);
+        }
     }
 }

@@ -13,9 +13,10 @@ namespace AirQuality.Web.Controllers
             _historyService = historyService;
         }
 
-        public ActionResult Index()
+        public async Task<ActionResult> Index()
         {
-            var history = _historyService.GetHistory();
+            var userId = Request.Cookies[Constants.UserIdCookie];
+            var history = await _historyService.GetHistory(userId);
 
             var model = new HistoryViewModel()
             {
@@ -25,9 +26,11 @@ namespace AirQuality.Web.Controllers
             return View(model);
         }
 
-        public ActionResult Clear()
+        public async Task<ActionResult> Clear()
         {
-            _historyService.ClearHistory();
+            var userId = Request.Cookies[Constants.UserIdCookie] ?? Guid.NewGuid().ToString();
+
+            await _historyService.ClearHistory(userId);
 
             return RedirectToAction("Index");
         }
