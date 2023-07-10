@@ -7,7 +7,7 @@ A lightweight .NET web application which provides air quality data for locations
 The following tools are prerequisites to developing the website;
 
 - Visual Studio 2022
-- [.Net Framework 6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
+- [.NET 6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
 
 ## Getting started
 
@@ -39,7 +39,7 @@ Once you've viewed a locations data, the page will be stored in the Recent Searc
 
 When you first visit the application, a cookie will be generated for your "user id". This is used to store your search history in the 'Recent searches' page.
 
-The app utilises caching of requests using Redis, so once you request the data for a city or location (which is then from the Open AQ API) a cachekey is stored with the results of this request in Redis. 
+The app utilises caching of requests using Redis, so once you request the data for a city or location (which is requested from the Open AQ API) a cachekey is stored with the results of this request in Redis. 
 
 When that same request is made again, the data is readily provided from the cache. 
 
