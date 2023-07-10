@@ -89,7 +89,7 @@ namespace AirQuality.Web.Services
                 {
                     citiesResult = await GetCitiesResult(new CitiesParams()
                     {
-                        Page = 1
+                        Page = i
                     });
 
                     if (citiesResult != null)
